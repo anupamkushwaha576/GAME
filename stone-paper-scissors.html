@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stone, Paper, Scissors — Duel Arena</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --slate:#3D4250;
+    --slate-dark:#282C36;
+    --ivory:#EFE7D8;
+    --ivory-dim:#DCD2BC;
+    --steel:#9AA7B0;
+    --chalk-red:#C1443C;
+    --mustard:#E3A83B;
+    --ink:#20222A;
+    --win:#5C9C6C;
+    --lose:#C1443C;
+    --tie:#9AA7B0;
+    font-family:'Inter',system-ui,sans-serif;
+  }
+  @font-face{
+    font-family:'Archivo Black';
+    src:local('Archivo Black');
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(255,255,255,0.04), transparent 40%),
+      radial-gradient(circle at 80% 85%, rgba(255,255,255,0.03), transparent 40%),
+      var(--slate-dark);
+    color:var(--ivory);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .arena{
+    width:100%;
+    max-width:720px;
+    background:var(--slate);
+    border-radius:18px;
+    padding:32px;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+    position:relative;
+    overflow:hidden;
+  }
+  .arena::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background-image:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 14px);
+    pointer-events:none;
+  }
+  header{
+    text-align:center;
+    margin-bottom:22px;
+    position:relative;
+  }
+  .eyebrow{
+    font-size:12px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--mustard);
+    font-weight:700;
+    margin-bottom:6px;
+  }
+  h1{
+    font-family:'Archivo Black', 'Inter', sans-serif;
+    font-size:clamp(28px,5vw,42px);
+    letter-spacing:-0.01em;
+    margin:0;
+    line-height:1;
+    color:var(--ivory);
+  }
+  h1 span{color:var(--chalk-red);}
+
+  /* SETUP SCREEN */
+  .setup{
+    text-align:center;
+    padding:20px 0 6px;
+    position:relative;
+  }
+  .setup p{
+    color:var(--steel);
+    font-size:14px;
+    margin:0 0 18px;
+  }
+  .target-row{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+  }
+  .target-btn{
+    background:var(--slate-dark);
+    border:2px solid transparent;
+    color:var(--ivory);
+    font-weight:700;
+    font-size:15px;
+    padding:10px 18px;
+    border-radius:10px;
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .target-btn:hover{border-color:var(--steel);}
+  .target-btn.active{
+    border-color:var(--mustard);
+    background:rgba(227,168,59,0.12);
+    color:var(--mustard);
+  }
+  .start-btn{
+    background:var(--chalk-red);
+    color:var(--ivory);
+    border:none;
+    font-family:'Archivo Black','Inter',sans-serif;
+    font-size:16px;
+    letter-spacing:.03em;
+    padding:14px 36px;
+    border-radius:10px;
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+    box-shadow:0 8px 0 #8f342e;
+  }
+  .start-btn:active{transform:translateY(4px);box-shadow:0 4px 0 #8f342e;}
+
+  /* SCOREBOARD */
+  .scoreboard{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:22px;
+    padding:14px 18px;
+    background:var(--slate-dark);
+    border-radius:12px;
+    position:relative;
+  }
+  .score-block{text-align:center;flex:1;}
+  .score-label{
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--steel);
+    margin-bottom:4px;
+  }
+  .score-num{
+    font-family:'Archivo Black','Inter',sans-serif;
+    font-size:34px;
+    color:var(--ivory);
+  }
+  .score-num.you{color:var(--mustard);}
+  .vs-divider{
+    font-size:12px;
+    color:var(--steel);
+    font-weight:700;
+    padding:0 10px;
+  }
+  .round-tag{
+    position:absolute;
+    top:-10px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--mustard);
+    color:var(--ink);
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.06em;
+    padding:3px 12px;
+    border-radius:20px;
+    text-transform:uppercase;
+  }
+
+  /* DUEL STAGE */
+  .stage{
+    display:flex;
+    align-items:center;
+    justify-content:space-around;
+    padding:20px 10px 30px;
+    position:relative;
+    min-height:170px;
+  }
+  .fighter{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+  }
+  .fighter-label{
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--steel);
+    font-weight:700;
+  }
+  .hand{
+    width:96px;
+    height:96px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:48px;
+    background:var(--slate-dark);
+    border:3px solid rgba(255,255,255,0.06);
+    transition:transform .08s ease;
+  }
+  .hand.shaking{ animation:shake 0.35s infinite; }
+  @keyframes shake{
+    0%,100%{transform:translateY(0) rotate(0deg);}
+    25%{transform:translateY(-6px) rotate(-4deg);}
+    75%{transform:translateY(-6px) rotate(4deg);}
+  }
+  .hand.reveal-pop{ animation:pop .35s ease; }
+  @keyframes pop{
+    0%{transform:scale(0.6);}
+    60%{transform:scale(1.15);}
+    100%{transform:scale(1);}
+  }
+  .hand.win-glow{
+    border-color:var(--win);
+    box-shadow:0 0 0 6px rgba(92,156,108,0.18);
+  }
+  .hand.lose-dim{
+    opacity:.45;
+  }
+  .clash-mark{
+    position:absolute;
+    left:50%;
+    top:36%;
+    transform:translate(-50%,-50%) scale(0);
+    font-size:34px;
+    pointer-events:none;
+  }
+  .clash-mark.burst{
+    animation:burst .5s ease forwards;
+  }
+  @keyframes burst{
+    0%{transform:translate(-50%,-50%) scale(0);opacity:0;}
+    40%{transform:translate(-50%,-50%) scale(1.4);opacity:1;}
+    100%{transform:translate(-50%,-50%) scale(1);opacity:0;}
+  }
+
+  /* CONTROLS */
+  .controls{
+    text-align:center;
+  }
+  .prompt{
+    font-size:14px;
+    color:var(--steel);
+    margin-bottom:14px;
+    min-height:20px;
+    font-weight:600;
+  }
+  .prompt.result-win{color:var(--win);}
+  .prompt.result-lose{color:var(--lose);}
+  .prompt.result-tie{color:var(--steel);}
+  .choices{
+    display:flex;
+    gap:14px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+  .choice-btn{
+    background:var(--slate-dark);
+    border:2px solid rgba(255,255,255,0.06);
+    color:var(--ivory);
+    width:84px;
+    height:84px;
+    border-radius:16px;
+    font-size:32px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:transform .12s ease, border-color .12s ease, background .12s ease;
+  }
+  .choice-btn:hover:not(:disabled){
+    transform:translateY(-4px);
+    border-color:var(--mustard);
+  }
+  .choice-btn:disabled{opacity:.35;cursor:default;}
+  .choice-name{
+    display:block;
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    margin-top:4px;
+    color:var(--steel);
+  }
+
+  /* HISTORY */
+  .history{
+    margin-top:22px;
+    display:flex;
+    gap:6px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+  .tick{
+    width:26px;
+    height:26px;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    font-weight:800;
+    color:var(--ink);
+  }
+  .tick.w{background:var(--win);}
+  .tick.l{background:var(--lose);color:var(--ivory);}
+  .tick.t{background:var(--steel);}
+
+  /* GAME OVER */
+  .gameover{
+    text-align:center;
+    padding:20px 0 6px;
+    display:none;
+  }
+  .trophy{font-size:56px;margin-bottom:6px;}
+  .go-title{
+    font-family:'Archivo Black','Inter',sans-serif;
+    font-size:26px;
+    margin:6px 0 4px;
+  }
+  .go-title.win{color:var(--mustard);}
+  .go-title.lose{color:var(--steel);}
+  .go-sub{
+    color:var(--steel);
+    font-size:14px;
+    margin-bottom:20px;
+  }
+  .replay-btn{
+    background:var(--mustard);
+    color:var(--ink);
+    border:none;
+    font-family:'Archivo Black','Inter',sans-serif;
+    font-size:15px;
+    padding:13px 32px;
+    border-radius:10px;
+    cursor:pointer;
+    box-shadow:0 8px 0 #b3822a;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .replay-btn:active{transform:translateY(4px);box-shadow:0 4px 0 #b3822a;}
+
+  .hidden{display:none !important;}
+
+  @media (max-width:480px){
+    .hand{width:76px;height:76px;font-size:38px;}
+    .choice-btn{width:70px;height:70px;font-size:26px;}
+    .score-num{font-size:26px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="arena">
+  <header>
+    <div class="eyebrow">Best Two Out Of... You Decide</div>
+    <h1>STONE · PAPER · <span>SCISSORS</span></h1>
+  </header>
+
+  <!-- SETUP -->
+  <div class="setup" id="setupScreen">
+    <p>Pick the target score, then throw down.</p>
+    <div class="target-row" id="targetRow">
+      <button class="target-btn" data-val="3">First to 3</button>
+      <button class="target-btn active" data-val="5">First to 5</button>
+      <button class="target-btn" data-val="7">First to 7</button>
+    </div>
+    <button class="start-btn" id="startBtn">START DUEL</button>
+  </div>
+
+  <!-- GAME -->
+  <div id="gameScreen" class="hidden">
+    <div class="scoreboard">
+      <div class="round-tag" id="roundTag">Round 1</div>
+      <div class="score-block">
+        <div class="score-label">You</div>
+        <div class="score-num you" id="playerScore">0</div>
+      </div>
+      <div class="vs-divider">VS</div>
+      <div class="score-block">
+        <div class="score-label">Computer</div>
+        <div class="score-num" id="computerScore">0</div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="fighter">
+        <div class="fighter-label">You</div>
+        <div class="hand" id="playerHand">✊</div>
+      </div>
+      <div class="clash-mark" id="clashMark">💥</div>
+      <div class="fighter">
+        <div class="fighter-label">Computer</div>
+        <div class="hand" id="computerHand">✊</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="prompt" id="prompt">Choose your weapon</div>
+      <div class="choices">
+        <button class="choice-btn" data-choice="stone">🪨</button>
+        <button class="choice-btn" data-choice="paper">📄</button>
+        <button class="choice-btn" data-choice="scissors">✂️</button>
+      </div>
+    </div>
+
+    <div class="history" id="history"></div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="gameover" id="gameoverScreen">
+    <div class="trophy" id="trophyIcon">🏆</div>
+    <div class="go-title" id="goTitle">You Win!</div>
+    <div class="go-sub" id="goSub">Final Score 5 — 3</div>
+    <button class="replay-btn" id="replayBtn">PLAY AGAIN</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const EMOJI = { stone:'🪨', paper:'📄', scissors:'✂️' };
+  const BEATS = { stone:'scissors', paper:'stone', scissors:'paper' };
+
+  let targetScore = 5;
+  let playerScore = 0;
+  let computerScore = 0;
+  let round = 1;
+  let historyLog = [];
+  let locked = false;
+
+  const setupScreen = document.getElementById('setupScreen');
+  const gameScreen = document.getElementById('gameScreen');
+  const gameoverScreen = document.getElementById('gameoverScreen');
+  const targetRow = document.getElementById('targetRow');
+  const startBtn = document.getElementById('startBtn');
+  const playerHand = document.getElementById('playerHand');
+  const computerHand = document.getElementById('computerHand');
+  const clashMark = document.getElementById('clashMark');
+  const prompt = document.getElementById('prompt');
+  const choiceBtns = document.querySelectorAll('.choice-btn');
+  const playerScoreEl = document.getElementById('playerScore');
+  const computerScoreEl = document.getElementById('computerScore');
+  const roundTag = document.getElementById('roundTag');
+  const historyEl = document.getElementById('history');
+  const replayBtn = document.getElementById('replayBtn');
+  const trophyIcon = document.getElementById('trophyIcon');
+  const goTitle = document.getElementById('goTitle');
+  const goSub = document.getElementById('goSub');
+
+  targetRow.addEventListener('click', (e) => {
+    const btn = e.target.closest('.target-btn');
+    if(!btn) return;
+    document.querySelectorAll('.target-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    targetScore = parseInt(btn.dataset.val, 10);
+  });
+
+  startBtn.addEventListener('click', () => {
+    setupScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    resetState();
+  });
+
+  replayBtn.addEventListener('click', () => {
+    gameoverScreen.style.display = 'none';
+    setupScreen.classList.remove('hidden');
+  });
+
+  choiceBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if(locked) return;
+      playRound(btn.dataset.choice);
+    });
+  });
+
+  function resetState(){
+    playerScore = 0;
+    computerScore = 0;
+    round = 1;
+    historyLog = [];
+    locked = false;
+    playerHand.textContent = '✊';
+    computerHand.textContent = '✊';
+    playerHand.className = 'hand';
+    computerHand.className = 'hand';
+    prompt.textContent = 'Choose your weapon';
+    prompt.className = 'prompt';
+    updateScoreboard();
+    renderHistory();
+    setChoicesEnabled(true);
+  }
+
+  function setChoicesEnabled(enabled){
+    choiceBtns.forEach(b => b.disabled = !enabled);
+  }
+
+  function updateScoreboard(){
+    playerScoreEl.textContent = playerScore;
+    computerScoreEl.textContent = computerScore;
+    roundTag.textContent = 'Round ' + round;
+  }
+
+  function renderHistory(){
+    historyEl.innerHTML = '';
+    historyLog.forEach(r => {
+      const t = document.createElement('div');
+      t.className = 'tick ' + (r === 'w' ? 'w' : r === 'l' ? 'l' : 't');
+      t.textContent = r === 'w' ? 'W' : r === 'l' ? 'L' : 'T';
+      historyEl.appendChild(t);
+    });
+  }
+
+  function playRound(playerChoice){
+    locked = true;
+    setChoicesEnabled(false);
+    prompt.textContent = 'Rock... paper... scissors...';
+    prompt.className = 'prompt';
+    clashMark.className = 'clash-mark';
+
+    playerHand.className = 'hand shaking';
+    computerHand.className = 'hand shaking';
+    playerHand.textContent = '✊';
+    computerHand.textContent = '✊';
+
+    setTimeout(() => {
+      const computerChoice = ['stone','paper','scissors'][Math.floor(Math.random()*3)];
+
+      playerHand.className = 'hand reveal-pop';
+      computerHand.className = 'hand reveal-pop';
+      playerHand.textContent = EMOJI[playerChoice];
+      computerHand.textContent = EMOJI[computerChoice];
+
+      let outcome; // 'w','l','t'
+      if(playerChoice === computerChoice){
+        outcome = 't';
+        prompt.textContent = "It's a tie — throw again!";
+        prompt.className = 'prompt result-tie';
+      } else if(BEATS[playerChoice] === computerChoice){
+        outcome = 'w';
+        playerScore++;
+        playerHand.classList.add('win-glow');
+        computerHand.classList.add('lose-dim');
+        prompt.textContent = 'You win this round!';
+        prompt.className = 'prompt result-win';
+        clashMark.classList.add('burst');
+      } else {
+        outcome = 'l';
+        computerScore++;
+        computerHand.classList.add('win-glow');
+        playerHand.classList.add('lose-dim');
+        prompt.textContent = 'Computer wins this round.';
+        prompt.className = 'prompt result-lose';
+        clashMark.classList.add('burst');
+      }
+
+      historyLog.push(outcome);
+      round++;
+      updateScoreboard();
+      renderHistory();
+
+      setTimeout(() => {
+        if(playerScore >= targetScore || computerScore >= targetScore){
+          showGameOver();
+        } else {
+          locked = false;
+          setChoicesEnabled(true);
+          if(outcome !== 't'){
+            prompt.textContent = 'Choose your weapon';
+            prompt.className = 'prompt';
+          }
+        }
+      }, 1100);
+
+    }, 700);
+  }
+
+  function showGameOver(){
+    gameScreen.classList.add('hidden');
+    gameoverScreen.style.display = 'block';
+    const playerWon = playerScore >= targetScore;
+    trophyIcon.textContent = playerWon ? '🏆' : '💀';
+    goTitle.textContent = playerWon ? 'You Win the Duel!' : 'Computer Wins';
+    goTitle.className = 'go-title ' + (playerWon ? 'win' : 'lose');
+    goSub.textContent = 'Final Score ' + playerScore + ' — ' + computerScore;
+  }
+
+})();
+</script>
+
+</body>
+</html>
